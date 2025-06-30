@@ -1,9 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const promptEl = document.getElementById('prompt');
     const submitBtn = document.getElementById('submit');
-    const responseContainer = document.getElementById('response-container');
-    const responseEl = document.getElementById('response');
-    const savedEntries = document.getElementById('saved-entries');
+    const chatMessages = document.getElementById('chat-messages');
+
+    // Auto-resize textarea
+    const autoResize = () => {
+        promptEl.style.height = 'auto';
+        promptEl.style.height = Math.min(promptEl.scrollHeight, 120) + 'px';
+    };
+
+    promptEl.addEventListener('input', autoResize);
 
     // Free AI API using a more reliable service
     const getAIResponse = async (prompt) => {
@@ -47,64 +53,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const loadEntries = () => {
-        const entries = JSON.parse(localStorage.getItem('ai-entries')) || [];
-        savedEntries.innerHTML = '';
-        entries.forEach((entry, index) => {
-            const card = document.createElement('div');
-            card.className = 'bg-white p-4 rounded shadow';
-            card.innerHTML = `
-                <p class="font-bold">Prompt:</p>
-                <p>${entry.prompt}</p>
-                <p class="font-bold mt-2">Response:</p>
-                <p>${entry.response}</p>
-                <button data-index="${index}" class="delete-btn mt-2 bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-            `;
-            savedEntries.appendChild(card);
-        });
+    // Add message to chat
+    const addMessage = (content, isUser = false) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+        
+        const messageBubble = document.createElement('div');
+        messageBubble.className = `max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+            isUser 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-white border border-gray-200 text-gray-800'
+        }`;
+        messageBubble.textContent = content;
+        
+        messageDiv.appendChild(messageBubble);
+        chatMessages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     };
 
-    const saveEntry = (prompt, response) => {
-        const entries = JSON.parse(localStorage.getItem('ai-entries')) || [];
-        entries.push({ prompt, response });
-        localStorage.setItem('ai-entries', JSON.stringify(entries));
-        loadEntries();
-    };
-
-    const deleteEntry = (index) => {
-        const entries = JSON.parse(localStorage.getItem('ai-entries')) || [];
-        entries.splice(index, 1);
-        localStorage.setItem('ai-entries', JSON.stringify(entries));
-        loadEntries();
-    };
-
-    submitBtn.addEventListener('click', async () => {
+    const submitPrompt = async () => {
         const prompt = promptEl.value.trim();
         if (!prompt) {
-            alert("Please enter a prompt.");
             return;
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Thinking...';
+        // Add user message
+        addMessage(prompt, true);
 
-        const response = await getAIResponse(prompt);
-        responseEl.textContent = response;
-        responseContainer.classList.remove('hidden');
-
-        saveEntry(prompt, response);
-
+        // Clear input and reset height
         promptEl.value = '';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Get Response';
-    });
+        promptEl.style.height = 'auto';
 
-    savedEntries.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn')) {
-            const index = e.target.getAttribute('data-index');
-            deleteEntry(index);
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        `;
+
+        // Get AI response
+        const response = await getAIResponse(prompt);
+        
+        // Add AI message
+        addMessage(response, false);
+
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+        `;
+    };
+
+    // Submit button click event
+    submitBtn.addEventListener('click', submitPrompt);
+
+    // Enter key press event on textarea
+    promptEl.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitPrompt();
         }
     });
-
-    loadEntries();
 });
