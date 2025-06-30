@@ -11,34 +11,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     promptEl.addEventListener('input', autoResize);
 
-    // Free AI API using a more reliable service
+    // Cohere API Integration
     const getAIResponse = async (prompt) => {
         try {
-            // Try using the free Cohere API (more reliable for web apps)
+            console.log('Attempting Cohere API call with prompt:', prompt);
+            
             const response = await fetch('https://api.cohere.ai/v1/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer YOUR_COHERE_API_KEY' // You'll need to get a free key
+                    'Authorization': 'Bearer yKD1pMR3nDLftOschsSz6JtCKKEFjDuNrU4zRVFG'
                 },
                 body: JSON.stringify({
-                    model: 'command-light',
+                    model: 'command',
                     prompt: prompt,
-                    max_tokens: 100,
-                    temperature: 0.7
+                    max_tokens: 200,
+                    temperature: 0.7,
+                    k: 0,
+                    stop_sequences: [],
+                    return_likelihoods: 'NONE'
                 })
             });
 
+            console.log('Cohere Response status:', response.status);
+
             if (!response.ok) {
-                throw new Error('API request failed');
+                const errorText = await response.text();
+                console.error('Cohere API Error Response:', errorText);
+                throw new Error(`Cohere API request failed: ${response.status}`);
             }
 
             const data = await response.json();
-            return data.generations[0]?.text || 'Sorry, I could not generate a response at this time.';
-        } catch (error) {
-            console.error('AI API Error:', error);
+            console.log('Cohere API Response data:', data);
             
-            // Enhanced fallback responses that are more engaging
+            if (data && data.generations && data.generations[0] && data.generations[0].text) {
+                return data.generations[0].text.trim();
+            } else {
+                console.error('Invalid Cohere response format:', data);
+                throw new Error('Invalid Cohere response format');
+            }
+        } catch (error) {
+            console.error('Cohere API Error:', error);
+            
+            // Enhanced fallback responses
             const mockResponses = [
                 `That's an interesting question about "${prompt}"! Let me share my thoughts on that.`,
                 `I appreciate you asking about "${prompt}". Here's what I think about this topic.`,
