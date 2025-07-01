@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({
                     model: 'command',
-                    prompt: prompt,
+                    prompt: `You are Ramble, a friendly AI chatbot. Respond as Ramble, not as Coral or any other name. User message: ${prompt}`,
                     max_tokens: 200,
                     temperature: 0.7,
                     k: 0,
